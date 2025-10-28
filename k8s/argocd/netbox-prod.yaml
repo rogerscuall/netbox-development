@@ -9,7 +9,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
+  project: netbox
 
   source:
     repoURL: https://gitlab.presidio.com/rgomez/netbox-development.git  # Update with your repo URL
