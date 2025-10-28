@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: netbox
+  namespace: openshift-gitops  # or argocd namespace
+spec:
+  description: NetBox IPAM and DCIM Application
+
+  sourceRepos:
+    - https://github.com/your-org/netbox-rosa.git  # Update with your repo URL
+    - '*'
+
+  destinations:
+    - namespace: 'netbox-*'
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  roles:
+    - name: developer
+      description: Developer access to NetBox
+      policies:
+        - p, proj:netbox:developer, applications, get, netbox/*, allow
+        - p, proj:netbox:developer, applications, sync, netbox/*, allow
+      groups:
+        - netbox-developers
+
+    - name: admin
+      description: Admin access to NetBox
+      policies:
+        - p, proj:netbox:admin, applications, *, netbox/*, allow
+      groups:
+        - netbox-admins

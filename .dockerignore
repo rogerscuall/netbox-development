@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+
+# Kubernetes
+k8s/
+
+# Documentation
+*.md
+!plugins-example/README.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backups
+backups/
+*.sql
+*.dump
+
+# Local development
+local/
+.env
+.env.local
+venv/
+ENV/
+
+# Secrets
+*secret*.yaml
+*.key
+*.pem

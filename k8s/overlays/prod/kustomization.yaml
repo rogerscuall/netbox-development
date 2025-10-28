@@ -1,0 +1,49 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: netbox-prod
+
+namePrefix: prod-
+
+commonLabels:
+  environment: prod
+
+resources:
+  - ../../base/postgres
+  - ../../base/redis
+  - ../../base/netbox
+
+patches:
+  # Increase replicas for prod
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+    target:
+      kind: Deployment
+      name: netbox
+
+  # Update route host for prod
+  - patch: |-
+      - op: add
+        path: /spec/host
+        value: netbox.apps.your-cluster.com
+    target:
+      kind: Route
+      name: netbox
+
+  # Increase storage for prod
+  - patch: |-
+      - op: replace
+        path: /spec/resources/requests/storage
+        value: "50Gi"
+    target:
+      kind: PersistentVolumeClaim
+      name: postgres-pvc
+
+configMapGenerator:
+  - name: netbox-config
+    behavior: merge
+    literals:
+      - ALLOWED_HOSTS=netbox.apps.your-cluster.com
+      - DEBUG=false

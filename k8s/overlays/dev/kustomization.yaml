@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: netbox-dev
+
+namePrefix: dev-
+
+commonLabels:
+  environment: dev
+
+resources:
+  - ../../base/postgres
+  - ../../base/redis
+  - ../../base/netbox
+
+patches:
+  # Reduce resource limits for dev environment
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "512Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "500m"
+    target:
+      kind: Deployment
+      name: netbox
+
+  # Update route host for dev
+  - patch: |-
+      - op: add
+        path: /spec/host
+        value: netbox-dev.apps.your-cluster.com
+    target:
+      kind: Route
+      name: netbox
+
+configMapGenerator:
+  - name: netbox-config
+    behavior: merge
+    literals:
+      - ALLOWED_HOSTS=netbox-dev.apps.your-cluster.com,*
+      - DEBUG=true

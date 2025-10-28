@@ -1,0 +1,18 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: netbox
+  labels:
+    app: netbox
+    component: application
+spec:
+  port:
+    targetPort: http
+  to:
+    kind: Service
+    name: netbox
+    weight: 100
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

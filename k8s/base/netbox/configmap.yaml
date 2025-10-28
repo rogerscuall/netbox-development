@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netbox-config
+  labels:
+    app: netbox
+    component: application
+data:
+  DB_HOST: postgres
+  DB_NAME: netbox
+  DB_USER: netbox
+  DB_PORT: "5432"
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_DATABASE: "0"
+  REDIS_CACHE_HOST: redis
+  REDIS_CACHE_PORT: "6379"
+  REDIS_CACHE_DATABASE: "1"
+  SUPERUSER_NAME: admin
+  SUPERUSER_EMAIL: admin@example.com
+  SKIP_SUPERUSER: "false"
+  # NetBox specific settings
+  ALLOWED_HOSTS: "*"
+  CORS_ORIGIN_ALLOW_ALL: "True"
+  EMAIL_SERVER: localhost
+  EMAIL_PORT: "25"
+  EMAIL_FROM: netbox@example.com
+  METRICS_ENABLED: "true"

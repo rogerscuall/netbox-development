@@ -1,0 +1,282 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netbox
+  labels:
+    app: netbox
+    component: application
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: netbox
+      component: application
+  template:
+    metadata:
+      labels:
+        app: netbox
+        component: application
+    spec:
+      initContainers:
+      - name: netbox-init
+        image: netboxcommunity/netbox:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Running database migrations..."
+          python3 /opt/netbox/netbox/manage.py migrate --no-input
+          echo "Collecting static files..."
+          python3 /opt/netbox/netbox/manage.py collectstatic --no-input
+          echo "Removing stale content types..."
+          python3 /opt/netbox/netbox/manage.py remove_stale_contenttypes --no-input
+          echo "Clearing expired sessions..."
+          python3 /opt/netbox/netbox/manage.py clearsessions
+          echo "Creating superuser if needed..."
+          python3 /opt/netbox/netbox/manage.py shell << 'PYEOF'
+          from django.contrib.auth import get_user_model
+          from users.models import Token
+          import os
+
+          User = get_user_model()
+          username = os.environ.get('SUPERUSER_NAME', 'admin')
+          email = os.environ.get('SUPERUSER_EMAIL', 'admin@example.com')
+          password = os.environ.get('SUPERUSER_PASSWORD', 'admin')
+          api_token = os.environ.get('SUPERUSER_API_TOKEN', '')
+
+          if not User.objects.filter(username=username).exists():
+              user = User.objects.create_superuser(username, email, password)
+              if api_token:
+                  Token.objects.create(user=user, key=api_token)
+              print(f"Superuser '{username}' created successfully")
+          else:
+              print(f"Superuser '{username}' already exists")
+          PYEOF
+          echo "Initialization complete!"
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: DB_HOST
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: DB_PORT
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_PORT
+        - name: REDIS_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_DATABASE
+        - name: REDIS_CACHE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_CACHE_HOST
+        - name: REDIS_CACHE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_CACHE_PORT
+        - name: REDIS_CACHE_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_CACHE_DATABASE
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: netbox-secret
+              key: SECRET_KEY
+        - name: SUPERUSER_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: SUPERUSER_NAME
+        - name: SUPERUSER_EMAIL
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: SUPERUSER_EMAIL
+        - name: SUPERUSER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: netbox-secret
+              key: SUPERUSER_PASSWORD
+        - name: SUPERUSER_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: netbox-secret
+              key: SUPERUSER_API_TOKEN
+        - name: SKIP_SUPERUSER
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: SKIP_SUPERUSER
+        volumeMounts:
+        - name: media
+          mountPath: /opt/netbox/netbox/media
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      containers:
+      - name: netbox
+        image: netboxcommunity/netbox:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: DB_HOST
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: DB_PORT
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_PORT
+        - name: REDIS_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_DATABASE
+        - name: REDIS_CACHE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_CACHE_HOST
+        - name: REDIS_CACHE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_CACHE_PORT
+        - name: REDIS_CACHE_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: REDIS_CACHE_DATABASE
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: netbox-secret
+              key: SECRET_KEY
+        - name: ALLOWED_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: ALLOWED_HOSTS
+        - name: CORS_ORIGIN_ALLOW_ALL
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: CORS_ORIGIN_ALLOW_ALL
+        - name: EMAIL_SERVER
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: EMAIL_SERVER
+        - name: EMAIL_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: EMAIL_PORT
+        - name: EMAIL_FROM
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: EMAIL_FROM
+        - name: METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: netbox-config
+              key: METRICS_ENABLED
+        volumeMounts:
+        - name: media
+          mountPath: /opt/netbox/netbox/media
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /api/
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: media
+        persistentVolumeClaim:
+          claimName: netbox-media-pvc
