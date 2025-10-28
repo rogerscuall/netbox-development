@@ -14,20 +14,23 @@ resources:
   - ../../base/netbox
 
 patches:
-  # Increase replicas for prod
+  # Set replicas for prod (1 due to ReadWriteOnce PVC limitation)
   - patch: |-
       - op: replace
         path: /spec/replicas
-        value: 2
+        value: 1
     target:
       kind: Deployment
       name: netbox
 
-  # Update route host for prod
+  # Update route host and service for prod
   - patch: |-
       - op: add
         path: /spec/host
         value: netbox-prod.apps.rhocp-cluster.presidiolab.local
+      - op: replace
+        path: /spec/to/name
+        value: prod-netbox
     target:
       kind: Route
       name: netbox
