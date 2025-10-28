@@ -27,7 +27,7 @@ patches:
   - patch: |-
       - op: add
         path: /spec/host
-        value: netbox.apps.your-cluster.com
+        value: netbox-prod.apps.rhocp-cluster.presidiolab.local
     target:
       kind: Route
       name: netbox
@@ -45,7 +45,7 @@ configMapGenerator:
   - name: netbox-config
     behavior: merge
     literals:
-      - ALLOWED_HOSTS=prod-netbox.netbox-dev.svc.cluster.local,*
+      - ALLOWED_HOSTS=netbox-prod.apps.rhocp-cluster.presidiolab.local prod-netbox.netbox-prod.svc.cluster.local *
       - DB_HOST=prod-postgres
       - REDIS_HOST=prod-redis
       - REDIS_CACHE_HOST=prod-redis
