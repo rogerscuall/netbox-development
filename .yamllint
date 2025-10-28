@@ -1,0 +1,63 @@
+---
+# yamllint configuration for Kubernetes manifests
+# https://yamllint.readthedocs.io/
+
+extends: default
+
+rules:
+  # Line length - allow longer lines for readability
+  line-length:
+    max: 120
+    level: warning
+
+  # Indentation - 2 spaces is standard for YAML
+  indentation:
+    spaces: 2
+    indent-sequences: true
+
+  # Comments
+  comments:
+    min-spaces-from-content: 1
+
+  # Trailing spaces
+  trailing-spaces: enable
+
+  # Document start (---) - not required for every file
+  document-start:
+    present: false
+
+  # Empty lines
+  empty-lines:
+    max: 2
+
+  # Truthy values - allow yes/no/true/false
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no']
+    check-keys: false
+
+  # Brackets - Kubernetes uses lots of brackets
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+
+  # Braces - Kubernetes uses lots of braces
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+
+  # Key duplicates
+  key-duplicates: enable
+
+  # Octal values
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
+
+# Ignore patterns
+ignore: |
+  .git/
+  .gitlab-ci.yml
+  .github/
+  *.md
+  node_modules/
+  venv/

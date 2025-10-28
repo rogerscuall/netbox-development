@@ -1,0 +1,19 @@
+# Trivy Ignore File
+# Use this file to suppress false positives or accepted vulnerabilities
+# https://aquasecurity.github.io/trivy/latest/docs/configuration/filtering/
+
+# Format:
+# CVE-YYYY-NNNNN
+# or
+# pkg:pypi/package-name@version
+
+# Example: Ignore specific CVE
+# CVE-2023-12345
+
+# Example: Ignore vulnerability in specific package version
+# pkg:pypi/requests@2.28.0
+
+# Example: Ignore with expiration date (format: yyyy-mm-dd)
+# CVE-2023-12345 exp:2024-12-31
+
+# Add your exceptions below:

@@ -1,0 +1,31 @@
+---
+# Hadolint configuration for Dockerfile linting
+# https://github.com/hadolint/hadolint
+
+# Rules to ignore
+ignored:
+  # DL3007: Using latest is acceptable for base images that we don't control
+  - DL3007
+
+  # DL3008: Pin versions in apt-get install (optional for development)
+  # - DL3008
+
+  # DL3013: Pin versions in pip (handled by requirements.txt)
+  # - DL3013
+
+# Trusted registries for base images
+trustedRegistries:
+  - docker.io
+  - netboxcommunity
+
+# Rules with custom error level
+override:
+  error:
+    - DL3000
+    - DL3001
+    - DL3002
+  warning:
+    - DL3042
+    - DL3033
+  info:
+    - DL3032
