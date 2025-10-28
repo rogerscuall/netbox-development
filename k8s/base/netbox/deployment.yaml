@@ -260,28 +260,6 @@ spec:
           limits:
             memory: "2Gi"
             cpu: "2000m"
-        startupProbe:
-          httpGet:
-            path: /api/
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 10
-          failureThreshold: 120
-        livenessProbe:
-          httpGet:
-            path: /api/
-            port: 8080
-          periodSeconds: 30
-          timeoutSeconds: 10
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /api/
-            port: 8080
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
       volumes:
       - name: media
         persistentVolumeClaim:
