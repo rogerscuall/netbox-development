@@ -45,5 +45,8 @@ configMapGenerator:
   - name: netbox-config
     behavior: merge
     literals:
-      - ALLOWED_HOSTS=netbox.apps.your-cluster.com
+      - ALLOWED_HOSTS=prod-netbox.netbox-dev.svc.cluster.local,*
+      - DB_HOST=prod-postgres
+      - REDIS_HOST=prod-redis
+      - REDIS_CACHE_HOST=prod-redis
       - DEBUG=false
