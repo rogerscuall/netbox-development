@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: netbox-prod
-  namespace: openshift-gitops  # or argocd namespace
+  namespace: openshift-operators  # or argocd namespace
   labels:
     app: netbox
     environment: prod
@@ -12,12 +12,12 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/your-org/netbox-rosa.git  # Update with your repo URL
+    repoURL: https://gitlab.presidio.com/rgomez/netbox-development.git  # Update with your repo URL
     targetRevision: main
     path: k8s/overlays/prod
 
   destination:
-    server: https://kubernetes.default.svc
+    server: https://api.rhocp-cluster.presidiolab.local:6443
     namespace: netbox-prod
 
   syncPolicy:

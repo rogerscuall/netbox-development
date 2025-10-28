@@ -2,17 +2,17 @@ apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
   name: netbox
-  namespace: openshift-gitops  # or argocd namespace
+  namespace: openshift-operators  # or argocd namespace
 spec:
   description: NetBox IPAM and DCIM Application
 
   sourceRepos:
-    - https://github.com/your-org/netbox-rosa.git  # Update with your repo URL
+    - https://gitlab.presidio.com/rgomez/netbox-development.git  # Update with your repo URL
     - '*'
 
   destinations:
     - namespace: 'netbox-*'
-      server: https://kubernetes.default.svc
+      server: https://api.rhocp-cluster.presidiolab.local:6443
 
   clusterResourceWhitelist:
     - group: '*'
