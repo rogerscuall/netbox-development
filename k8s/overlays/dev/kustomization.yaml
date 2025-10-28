@@ -26,11 +26,14 @@ patches:
       kind: Deployment
       name: netbox
 
-  # Update route host for dev
+  # Update route host and service for dev
   - patch: |-
       - op: add
         path: /spec/host
-        value: netbox-dev.apps.your-cluster.com
+        value: netbox-dev.apps.rhocp-cluster.presidiolab.local
+      - op: replace
+        path: /spec/to/name
+        value: dev-netbox
     target:
       kind: Route
       name: netbox
@@ -39,7 +42,7 @@ configMapGenerator:
   - name: netbox-config
     behavior: merge
     literals:
-      - ALLOWED_HOSTS=dev-netbox.netbox-dev.svc.cluster.local,*
+      - ALLOWED_HOSTS=netbox-dev.apps.rhocp-cluster.presidiolab.local,dev-netbox.netbox-dev.svc.cluster.local,*
       - DB_HOST=dev-postgres
       - REDIS_HOST=dev-redis
       - REDIS_CACHE_HOST=dev-redis
