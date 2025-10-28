@@ -65,7 +65,7 @@ build-image:
   services:
     - docker:24-dind
   before_script:
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.presidio.com
   script:
     - |
       echo "Building Docker image: $IMAGE_NAME:$IMAGE_TAG"
@@ -89,6 +89,8 @@ build-image:
 
       echo "Image build completed successfully!"
       docker images | grep $CI_REGISTRY_IMAGE
+
+      docker push $IMAGE_NAME:$IMAGE_TAG
   artifacts:
     paths:
       - image.tar
