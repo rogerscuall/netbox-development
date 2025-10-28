@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netbox-plugins-config
+  labels:
+    app: netbox
+    component: application
+data:
+  plugins.py: |
+    # Enable netbox-topology-views plugin
+    PLUGINS = ["netbox_topology_views"]
+
+    # Plugin configuration
+    PLUGINS_CONFIG = {
+        "netbox_topology_views": {
+            "static_image_directory": "netbox_topology_views/img",
+            "allow_coordinates_saving": True,
+            "always_save_coordinates": True,
+        }
+    }

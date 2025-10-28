@@ -13,6 +13,7 @@ resources:
   - ../../base/redis
   - ../../base/netbox
   - plugin-requirements.yaml
+  - plugins-config.yaml
 
 patches:
   # Reduce resource limits for dev environment
@@ -79,7 +80,25 @@ patches:
           configMap:
             name: dev-netbox-plugin-requirements
       - op: add
+        path: /spec/template/spec/volumes/-
+        value:
+          name: plugins-config
+          configMap:
+            name: dev-netbox-plugins-config
+      - op: add
         path: /spec/template/spec/initContainers/0/volumeMounts/-
+        value:
+          name: plugin-requirements
+          mountPath: /opt/netbox/local_requirements.txt
+          subPath: local_requirements.txt
+      - op: add
+        path: /spec/template/spec/initContainers/0/volumeMounts/-
+        value:
+          name: plugins-config
+          mountPath: /etc/netbox/config/plugins.py
+          subPath: plugins.py
+      - op: add
+        path: /spec/template/spec/containers/0/volumeMounts/-
         value:
           name: plugin-requirements
           mountPath: /opt/netbox/local_requirements.txt
@@ -87,9 +106,9 @@ patches:
       - op: add
         path: /spec/template/spec/containers/0/volumeMounts/-
         value:
-          name: plugin-requirements
-          mountPath: /opt/netbox/local_requirements.txt
-          subPath: local_requirements.txt
+          name: plugins-config
+          mountPath: /etc/netbox/config/plugins.py
+          subPath: plugins.py
     target:
       kind: Deployment
       name: netbox
@@ -103,4 +122,3 @@ configMapGenerator:
       - REDIS_HOST=dev-redis
       - REDIS_CACHE_HOST=dev-redis
       - DEBUG=true
-      - PLUGINS=["netbox_topology_views"]
