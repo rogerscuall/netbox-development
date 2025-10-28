@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netbox-plugin-requirements
+  labels:
+    app: netbox
+    component: application
+data:
+  local_requirements.txt: |
+    netbox-topology-views
