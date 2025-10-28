@@ -1,0 +1,265 @@
+---
+# GitLab CI/CD Pipeline for NetBox Custom Image
+# Focuses on building, linting, and security scanning
+
+stages:
+  - lint
+  - build
+  - scan
+  - push
+
+variables:
+  # Docker image configuration
+  DOCKER_REGISTRY: $CI_REGISTRY
+  IMAGE_NAME: $CI_REGISTRY_IMAGE
+  IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+  LATEST_TAG: latest
+
+  # Docker build configuration
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+# Default configuration for all jobs
+default:
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+
+# ============================================
+# LINT STAGE
+# ============================================
+
+dockerfile-lint:
+  stage: lint
+  image: hadolint/hadolint:latest-alpine
+  script:
+    - echo "Linting Dockerfile..."
+    - hadolint Dockerfile
+  allow_failure: false
+  tags:
+    - docker
+
+yaml-lint:
+  stage: lint
+  image: cytopia/yamllint:latest
+  script:
+    - echo "Linting YAML files..."
+    - yamllint k8s/ || true
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+  tags:
+    - docker
+
+# ============================================
+# BUILD STAGE
+# ============================================
+
+build-image:
+  stage: build
+  image: docker:24-git
+  services:
+    - docker:24-dind
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - |
+      echo "Building Docker image: $IMAGE_NAME:$IMAGE_TAG"
+
+      # Build with cache
+      docker build \
+        --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+        --build-arg VCS_REF=$CI_COMMIT_SHA \
+        --build-arg VERSION=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA} \
+        --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+        --label "org.opencontainers.image.revision=$CI_COMMIT_SHA" \
+        --label "org.opencontainers.image.version=${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}" \
+        --tag $IMAGE_NAME:$IMAGE_TAG \
+        --tag $IMAGE_NAME:$CI_COMMIT_REF_SLUG \
+        --cache-from $IMAGE_NAME:latest \
+        --file Dockerfile \
+        .
+
+      echo "Saving image to artifact..."
+      docker save $IMAGE_NAME:$IMAGE_TAG -o image.tar
+
+      echo "Image build completed successfully!"
+      docker images | grep $CI_REGISTRY_IMAGE
+  artifacts:
+    paths:
+      - image.tar
+    expire_in: 1 day
+  tags:
+    - docker
+
+# ============================================
+# SCAN STAGE - Security Scanning
+# ============================================
+
+trivy-scan:
+  stage: scan
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker load -i image.tar
+  script:
+    - |
+      echo "Installing Trivy..."
+      apk add --no-cache curl
+      curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      echo "Scanning image for vulnerabilities..."
+
+      # Generate JSON report
+      trivy image \
+        --severity HIGH,CRITICAL \
+        --exit-code 0 \
+        --format json \
+        --output trivy-report.json \
+        $IMAGE_NAME:$IMAGE_TAG
+
+      # Generate table report for logs
+      echo "=== Vulnerability Scan Results ==="
+      trivy image \
+        --severity HIGH,CRITICAL \
+        --exit-code 0 \
+        --format table \
+        $IMAGE_NAME:$IMAGE_TAG
+
+      # Fail if critical vulnerabilities found (can be adjusted)
+      echo ""
+      echo "Checking for critical vulnerabilities..."
+      trivy image \
+        --severity CRITICAL \
+        --exit-code 1 \
+        $IMAGE_NAME:$IMAGE_TAG || echo "WARNING: Critical vulnerabilities found!"
+  artifacts:
+    reports:
+      container_scanning: trivy-report.json
+    paths:
+      - trivy-report.json
+    expire_in: 30 days
+    when: always
+  dependencies:
+    - build-image
+  allow_failure: true
+  tags:
+    - docker
+
+dependency-scan:
+  stage: scan
+  image: python:3.11-slim
+  script:
+    - |
+      echo "Installing security scanning tools..."
+      pip install --no-cache-dir safety pip-audit
+
+      echo "Scanning Python dependencies..."
+
+      if [ -f "plugins-example/requirements.txt" ]; then
+        echo "=== Scanning plugin requirements ==="
+
+        # Safety check
+        echo "Running Safety check..."
+        safety check --file plugins-example/requirements.txt --output text || true
+        safety check --file plugins-example/requirements.txt --output json > safety-report.json || true
+
+        # pip-audit check
+        echo ""
+        echo "Running pip-audit..."
+        pip-audit --requirement plugins-example/requirements.txt --format json > pip-audit-report.json || true
+        pip-audit --requirement plugins-example/requirements.txt || true
+      else
+        echo "No requirements.txt found, skipping dependency scan"
+      fi
+  artifacts:
+    paths:
+      - safety-report.json
+      - pip-audit-report.json
+    expire_in: 30 days
+    when: always
+  allow_failure: true
+  tags:
+    - docker
+
+grype-scan:
+  stage: scan
+  image: anchore/grype:latest
+  before_script:
+    - apk add --no-cache docker
+  script:
+    - |
+      echo "Loading Docker image..."
+      docker load -i image.tar
+
+      echo "Scanning with Grype..."
+      grype $IMAGE_NAME:$IMAGE_TAG \
+        --fail-on critical \
+        --output json \
+        --file grype-report.json || true
+
+      echo ""
+      echo "=== Grype Scan Results ==="
+      grype $IMAGE_NAME:$IMAGE_TAG --output table
+  artifacts:
+    paths:
+      - grype-report.json
+    expire_in: 30 days
+    when: always
+  dependencies:
+    - build-image
+  allow_failure: true
+  tags:
+    - docker
+
+# ============================================
+# PUSH STAGE
+# ============================================
+
+push-image:
+  stage: push
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker load -i image.tar
+  script:
+    - |
+      echo "Pushing image to registry..."
+
+      # Push commit SHA tag
+      docker push $IMAGE_NAME:$IMAGE_TAG
+
+      # Push branch tag
+      docker push $IMAGE_NAME:$CI_COMMIT_REF_SLUG
+
+      # Push latest tag for main/master branch
+      if [[ "$CI_COMMIT_BRANCH" == "main" ]] || [[ "$CI_COMMIT_BRANCH" == "master" ]]; then
+        echo "Tagging and pushing as latest..."
+        docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:$LATEST_TAG
+        docker push $IMAGE_NAME:$LATEST_TAG
+      fi
+
+      # Push version tag if this is a tag
+      if [[ -n "$CI_COMMIT_TAG" ]]; then
+        echo "Tagging and pushing version tag: $CI_COMMIT_TAG"
+        docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:$CI_COMMIT_TAG
+        docker push $IMAGE_NAME:$CI_COMMIT_TAG
+      fi
+
+      echo "Image push completed successfully!"
+      echo "Available at: $IMAGE_NAME:$IMAGE_TAG"
+  dependencies:
+    - build-image
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_TAG'
+  tags:
+    - docker

@@ -1,7 +1,7 @@
 FROM netboxcommunity/netbox:latest
 
 # Metadata
-LABEL maintainer="your.email@example.com"
+LABEL maintainer="rgomez@presidio.com"
 LABEL description="Custom NetBox image with plugins"
 
 # Switch to root for installations
