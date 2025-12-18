@@ -6,7 +6,7 @@ metadata:
     app: netbox
     component: application
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: netbox
