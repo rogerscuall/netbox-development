@@ -113,6 +113,49 @@ patches:
       kind: Deployment
       name: netbox
 
+  # Override init container command to install plugins before migrations
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/initContainers/0/command/2
+        value: |
+          set -e
+          echo "Installing plugin requirements..."
+          if [ -f /opt/netbox/local_requirements.txt ]; then
+            pip install --no-cache-dir -r /opt/netbox/local_requirements.txt
+          fi
+          echo "Running database migrations..."
+          python3 /opt/netbox/netbox/manage.py migrate --no-input
+          echo "Collecting static files..."
+          python3 /opt/netbox/netbox/manage.py collectstatic --no-input
+          echo "Removing stale content types..."
+          python3 /opt/netbox/netbox/manage.py remove_stale_contenttypes --no-input
+          echo "Clearing expired sessions..."
+          python3 /opt/netbox/netbox/manage.py clearsessions
+          echo "Creating superuser if needed..."
+          python3 /opt/netbox/netbox/manage.py shell << 'PYEOF'
+          from django.contrib.auth import get_user_model
+          from users.models import Token
+          import os
+
+          User = get_user_model()
+          username = os.environ.get('SUPERUSER_NAME', 'admin')
+          email = os.environ.get('SUPERUSER_EMAIL', 'admin@example.com')
+          password = os.environ.get('SUPERUSER_PASSWORD', 'admin')
+          api_token = os.environ.get('SUPERUSER_API_TOKEN', '')
+
+          if not User.objects.filter(username=username).exists():
+              user = User.objects.create_superuser(username, email, password)
+              if api_token:
+                  Token.objects.create(user=user, key=api_token)
+              print(f"Superuser '{username}' created successfully")
+          else:
+              print(f"Superuser '{username}' already exists")
+          PYEOF
+          echo "Initialization complete!"
+    target:
+      kind: Deployment
+      name: netbox
+
 configMapGenerator:
   - name: netbox-config
     behavior: merge
