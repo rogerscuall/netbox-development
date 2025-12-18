@@ -54,3 +54,5 @@ backups/
 local/
 .env
 .env.local
+.claude/
+CLAU*
