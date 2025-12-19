@@ -60,6 +60,7 @@ dockerfile-lint:
 # ============================================
 
 build-image:
+  stage: build
   image: docker:24.0.5-cli
   services:
     - docker:24.0.5-dind
