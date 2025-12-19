@@ -41,31 +41,34 @@ dockerfile-lint:
   tags:
     - docker
 
-yaml-lint:
-  stage: lint
-  image: cytopia/yamllint:latest
-  script:
-    - echo "Linting YAML files..."
-    - yamllint k8s/ || true
-  allow_failure: true
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-  tags:
-    - docker
+# yaml-lint:
+#   stage: lint
+#   image: cytopia/yamllint:latest
+#   script:
+#     - echo "Linting YAML files..."
+#     - yamllint k8s/ || true
+#   allow_failure: true
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+#     - if: '$CI_COMMIT_BRANCH == "main"'
+#     - if: '$CI_COMMIT_BRANCH == "develop"'
+#   tags:
+#     - docker
 
 # ============================================
 # BUILD STAGE
 # ============================================
 
 build-image:
-  stage: build
-  image: docker:24-git
+  image: docker:24.0.5-cli
   services:
-    - docker:24-dind
+    - docker:24.0.5-dind
   before_script:
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.presidio.com
+    - docker info
+  # before_script:
+  #   - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.presidio.com
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
   script:
     - |
       echo "Building Docker image: $IMAGE_NAME:$IMAGE_TAG"
