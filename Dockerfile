@@ -16,8 +16,8 @@ USER root
 # Copy plugin requirements
 COPY plugins-example/requirements.txt /tmp/plugin-requirements.txt
 
-# Install plugin requirements
-RUN /opt/netbox/venv/bin/pip install --no-cache-dir -r /tmp/plugin-requirements.txt
+# Install plugin requirements using uv (used by netbox-docker image)
+RUN /usr/local/bin/uv pip install --no-cache-dir -r /tmp/plugin-requirements.txt
 
 # Copy custom plugins (if developing locally)
 # COPY plugins-example/my_plugin /opt/netbox/netbox/plugins/my_plugin
