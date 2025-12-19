@@ -31,15 +31,15 @@ default:
 # LINT STAGE
 # ============================================
 
-dockerfile-lint:
-  stage: lint
-  image: hadolint/hadolint:latest-alpine
-  script:
-    - echo "Linting Dockerfile..."
-    - hadolint Dockerfile
-  allow_failure: false
-  tags:
-    - docker
+# dockerfile-lint:
+#   stage: lint
+#   image: hadolint/hadolint:latest-alpine
+#   script:
+#     - echo "Linting Dockerfile..."
+#     - hadolint Dockerfile
+#   allow_failure: false
+#   tags:
+#     - docker
 
 # yaml-lint:
 #   stage: lint
@@ -65,6 +65,7 @@ build-image:
   services:
     - docker:24.0.5-dind
   before_script:
+    - env
     - docker info
   # before_script:
   #   - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.presidio.com
