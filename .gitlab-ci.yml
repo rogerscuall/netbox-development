@@ -66,6 +66,7 @@ build-image:
     - docker:24.0.5-dind
   before_script:
     - env
+    - unset DOCKER_HOST
     - docker info
   # before_script:
   #   - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.presidio.com
